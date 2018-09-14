@@ -6,14 +6,18 @@ using UnityEngine.Networking;
 public class PlayerController : NetworkBehaviour {
 
     float moveSpeed = 2.5f;
+    float animationThreshold = 0.01f;
+
+    Animator animator;
 
 
     [SyncVar] Vector3 serverPosition;
     Vector3 serverPositionSmoothVelocity;
+    Vector3 movement;
 
     // Use this for initialization
     void Start () {
-		
+        animator = GetComponent<Animator>();
 	}
 	
 	// Update is called once per frame
@@ -35,15 +39,32 @@ public class PlayerController : NetworkBehaviour {
         if (hasAuthority == false)
         {
             // Lerp towards the "correct" server position
-            transform.position = Vector3.SmoothDamp(transform.position, serverPosition, ref serverPositionSmoothVelocity, 0.25f);
+            Vector3 newPosition = Vector3.SmoothDamp(transform.position, serverPosition, ref serverPositionSmoothVelocity, 0.05f);
+            movement = (newPosition - transform.position);
+            transform.position = newPosition;
+        }
+
+        if(Mathf.Abs(movement.x) < animationThreshold && Mathf.Abs(movement.y) < animationThreshold)
+        {
+            animator.SetBool("isIdle", true);
+        }
+        else
+        {
+            animator.SetBool("isIdle", false);
+            animator.SetFloat("X", movement.x);
+            animator.SetFloat("Y", movement.y);
         }
 
 
-	}
+        
+
+
+
+    }
 
     void AuthorityUpdate()
     {
-        Vector3 movement = new Vector3(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"), 0f).normalized;
+        movement = new Vector3(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"), 0f).normalized;
         transform.Translate(movement * Time.deltaTime * moveSpeed);
 
         CmdUpdatePosition(transform.position);
